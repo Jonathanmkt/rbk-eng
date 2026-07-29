@@ -26,6 +26,7 @@ import {
   snapRangeToWords,
   wordRangeAt,
 } from '@/lib/leitor/words';
+import { speak as speakTTS } from '@/lib/tts';
 import {
   salvarSelecao,
   saveProgress,
@@ -84,12 +85,7 @@ export function Reader({
 
   const speak = useCallback(
     (text: string, rate = 1) => {
-      if (typeof window === 'undefined' || !window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = language;
-      utterance.rate = rate;
-      window.speechSynthesis.speak(utterance);
+      speakTTS(text, { lang: language, rate });
     },
     [language]
   );
@@ -123,13 +119,12 @@ export function Reader({
     const full = parts.join(' ').replace(/\s+/g, ' ').trim();
     if (!full) return;
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(full);
-    utterance.lang = language;
-    utterance.onend = () => setSpeakingPage(false);
-    utterance.onerror = () => setSpeakingPage(false);
-    window.speechSynthesis.speak(utterance);
-    setSpeakingPage(true);
+    const started = speakTTS(full, {
+      lang: language,
+      onend: () => setSpeakingPage(false),
+      onerror: () => setSpeakingPage(false),
+    });
+    if (started) setSpeakingPage(true);
   }, [language, speakingPage]);
 
   // Traduz a página: injeta a tradução (Azure) abaixo de cada parágrafo visível, dentro do iframe.

@@ -13,6 +13,7 @@ import {
   type BookLanguage,
   type ContextualTranslation,
 } from '../leitor/actions';
+import { speak as speakTTS } from '@/lib/tts';
 import { salvarSelecaoMusica, type DeezerHit, type Song } from './actions';
 import { fetchLyrics } from './lyrics';
 import { SongSearch } from './song-search';
@@ -68,11 +69,7 @@ export function MusicClient() {
   const [isSaving, startSaving] = useTransition();
 
   const speak = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = language;
-    window.speechSynthesis.speak(u);
+    speakTTS(text, { lang: language });
   };
 
   // Lê a letra inteira em voz alta (toggle). Para sozinho ao terminar / ao sair.
@@ -85,13 +82,12 @@ export function MusicClient() {
       return;
     }
     if (!track) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(track.lyrics);
-    u.lang = language;
-    u.onend = () => setSpeakingAll(false);
-    u.onerror = () => setSpeakingAll(false);
-    window.speechSynthesis.speak(u);
-    setSpeakingAll(true);
+    const started = speakTTS(track.lyrics, {
+      lang: language,
+      onend: () => setSpeakingAll(false),
+      onerror: () => setSpeakingAll(false),
+    });
+    if (started) setSpeakingAll(true);
   };
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
 

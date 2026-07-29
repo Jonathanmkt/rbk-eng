@@ -3,14 +3,11 @@
 import { Volume2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { speak as speakTTS } from '@/lib/tts';
 
 export function ListenWordButton({ text, language }: { text: string; language: string }) {
   const speak = () => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language;
-    window.speechSynthesis.speak(utterance);
+    speakTTS(text, { lang: language });
   };
 
   return (

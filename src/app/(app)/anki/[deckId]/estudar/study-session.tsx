@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { previewRatings, Rating, type ActiveRating, type CardRow } from '@/lib/anki/fsrs';
 import { RichText, stripMarks } from '@/lib/anki/rich-text';
+import { speak as speakTTS } from '@/lib/tts';
 import { submitReview } from '../../actions';
 
 const RATING_CONFIG: { rating: ActiveRating; label: string; variant: 'destructive' | 'outline' | 'secondary' | 'brand' }[] = [
@@ -51,12 +52,9 @@ export function StudySession({
 
   // TTS via Web Speech API (nativo do navegador). Fala o texto no idioma do baralho.
   const speak = (text: string, rate = 1) => {
-    if (!audioLang || typeof window === 'undefined' || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(stripMarks(text)); // sem os ** do negrito
-    utterance.lang = audioLang;
-    utterance.rate = rate; // 1 = normal, 0.6 = lento (tartaruga)
-    window.speechSynthesis.speak(utterance);
+    if (!audioLang) return;
+    // rate: 1 = normal, 0.6 = lento (tartaruga). stripMarks tira os ** do negrito.
+    speakTTS(stripMarks(text), { lang: audioLang, rate });
   };
 
   // Toca a frente (idioma-alvo) automaticamente quando um novo cartão aparece.
