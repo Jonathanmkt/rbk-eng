@@ -1,6 +1,15 @@
 # Família Figueiredo
 
-App da Família Figueiredo. Stack inspirada no **Idealis Core**: Next.js (App Router) + TypeScript + Tailwind + Supabase.
+App da Família Figueiredo para **aprendizado de inglês**. Stack inspirada no **Idealis Core**: Next.js (App Router) + TypeScript + Tailwind + Supabase.
+
+## Funcionalidades
+
+- **Leitor** — biblioteca de e-books (upload de PDF ou EPUB, conversão PDF→EPUB feita no próprio navegador). Leitura paginada com seleção de palavras/trechos, áudio da página em voz alta e tradução sob demanda.
+- **Música** — busca uma música e vai direto para a letra, com áudio (TTS) e tradução linha a linha.
+- **Banco de palavras** — palavras e trechos salvos durante a leitura ou nas letras de música, para revisar depois.
+- **Anki** — baralhos de flashcards com repetição espaçada (algoritmo FSRS), no estilo do Anki tradicional.
+
+Todo o conteúdo do app (textos, áudio) é em inglês — não há troca de idioma nas telas (exceto os baralhos do Anki, que podem ser configurados em pt-BR ou en-US).
 
 ## Stack
 
@@ -35,7 +44,13 @@ Crie um `.env.local` na raiz com:
 | Chave | Descrição |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública (anon) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Chave de serviço — **somente server, nunca no client** |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Chave pública (publishable) |
+| `SUPABASE_SECRET_KEY` | Chave secreta — **somente server, nunca no client** |
+| `SUPABASE_JWKS_URL` | URL do JWKS do projeto Supabase (validação de sessão) |
+| `AZURE_TRANSLATOR_KEY` / `AZURE_TRANSLATOR_REGION` | Tradução (Azure Translator) usada no leitor e na música |
+| `OPENAI_API_KEY` | Explicações contextuais de tradução |
 
 > `.env*` está no `.gitignore`. Nunca commite segredos.
+>
+> A busca de letras (Deezer + LRCLIB) não usa chave — Deezer é chamado por um proxy no
+> servidor (sem CORS) e o LRCLIB é chamado direto do navegador.

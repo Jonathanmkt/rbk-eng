@@ -25,6 +25,7 @@ yarn-error.log*
 # env files (NUNCA commitar segredos)
 .env
 .env.*
+!.env.local.example
 
 # MCP local config (pode conter access tokens)
 .mcp.json
