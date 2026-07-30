@@ -18,6 +18,15 @@ Todo o conteúdo do app (textos, áudio) é em inglês — não há troca de idi
 - **Tailwind CSS 4** (CSS-first: `@import 'tailwindcss'` + `@theme`, sem `tailwind.config`)
 - **Supabase** (`@supabase/ssr`) — clientes em `src/lib/supabase/`
 
+## Aparência
+
+A identidade visual é montada em **tokens** (nada de cor escrita direto na tela) e organizada em
+**presets** de tema — o padrão é o *Glass Brasão* (vidro navy com o vermelho do brasão), e há
+ainda *Navy Glass*, *Brasão* e *Neutro*. Trocar de preset muda o app inteiro de uma vez.
+
+Para ver e calibrar tudo junto, com o seletor de tema à mão, rode o projeto e abra
+`/dev/style-guide` (componentes) e `/dev/painel` (tema aplicado num painel real).
+
 ## Começando
 
 ```bash

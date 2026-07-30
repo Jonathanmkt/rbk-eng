@@ -6,6 +6,39 @@ recentes primeiro.
 
 ---
 
+## 2026-07-30 — A skill de design system deixa de ser molde em branco (e volta a carregar)
+
+**O quê:** A skill local `.claude/skills/design-system` foi reescrita por inteiro, agora descrevendo
+este projeto de verdade: os 4 presets (`glass-brasao` como padrão, `navy-glass`, `brasao`,
+`neutral`), o mecanismo de herança entre presets (um herda o bloco do outro e só troca a marca), a
+marca do brasão (`--brand` em oklch), o vidro como propriedade do preset (e não da tela), as
+variantes customizadas de `Button`/`Badge`/`Tabs`, os tokens de movimento do `src/lib/motion.ts` e
+as telas-laboratório `/dev/style-guide` e `/dev/painel`. CLAUDE.md e README foram alinhados ao mesmo
+conteúdo.
+
+**Por quê:** Duas falhas somadas. (1) O arquivo era o **molde do playbook copiado e nunca
+adaptado** — os 5 pontos marcados `🔧 ADAPTAR` estavam em branco, então a skill descrevia um projeto
+genérico que não existe. O método já estava implementado no *código* desde antes; só não estava
+escrito em lugar nenhum. (2) E ela **nem carregava**: havia uma skill global de mesmo nome publicada
+pelo playbook, e no Claude Code colisão de nome resolve com `personal > project` — a global vencia a
+do projeto, sem erro e sem aviso. A global foi despublicada e renomeada para `ui-foundations`
+(guardando só o método universal), deixando o nome `design-system` livre para a verdade local.
+Escrever isso agora tem valor porque **este é o projeto de referência de UI da casa**: medição de
+30/07/2026 contando cor escrita direto na tela deu Família Figueiredo **0** (35 telas), contra 574
+no Idealis Core (229 telas) e 1.086 no app-singaerj (206 telas). A hipótese registrada na skill é
+que as telas-laboratório são a causa — existe um lugar para calibrar cor fora das telas, então a cor
+não vaza para elas.
+
+**Armadilha registrada:** `Button` e `Badge` daqui têm variantes que o shadcn não tem (`brand`,
+`success`, `warning`, `info`) e `Tabs` tem pílula animada. Rodar `npx shadcn@latest add` nesses
+componentes **sobrescreve e some com tudo isso, em silêncio** — a regra está agora na skill e no
+CLAUDE.md.
+
+**Arquivos-chave:** `.claude/skills/design-system/SKILL.md`, `CLAUDE.md`, `README.md`,
+`src/lib/theme.ts`, `src/app/globals.css`, `src/lib/motion.ts`.
+
+---
+
 ## 2026-07-16 — Foco total em inglês: música com dupla fonte, áudio/tradução no leitor, PDF→EPUB no cliente, TTS centralizado
 
 **O quê:** Rodada grande que fechou vários fios soltos do app. (1) O app passou a ser só de
