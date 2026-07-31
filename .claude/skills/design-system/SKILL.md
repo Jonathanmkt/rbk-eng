@@ -8,7 +8,7 @@ description: >-
   tá feio", "o foco acende demais", "deixa esse modal no padrão", "anima essa lista"). Aqui mora a
   verdade visual deste app: 4 presets trocáveis por `data-theme`, a marca do brasão, o vidro e os
   tokens de movimento. As regras universais (shadcn-first, regra de ouro, o que nunca fazer) estão
-  na skill global `ui-foundations`.
+  na skill global `ui-diaria`.
 ---
 
 <!-- base-playbook: design-system v2 (2026-07-30) -->
