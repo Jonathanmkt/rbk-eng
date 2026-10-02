@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plano de melhoria do curso</title>
+  <style>
+    :root {
+      --fundo: #0b1b3f;
+      --cartao: #13284f;
+      --borda: #24406f;
+      --texto: #f5f7fb;
+      --suave: #a9b8d6;
+      --marca: #e5322d;
+      --existe: #2fa66a;
+      --construir: #e0a526;
+      --validar: #4b8df0;
+      --aberto: #8a95ab;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--fundo);
+      color: var(--texto);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.55;
+      padding: 40px 16px 64px;
+    }
+    main { max-width: 820px; margin: 0 auto; }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      letter-spacing: -0.02em;
+      padding-bottom: 16px;
+      border-bottom: 3px solid var(--marca);
+    }
+    .sub { color: var(--suave); margin: 12px 0 32px; font-size: 0.95rem; }
+    h2 { font-size: 1.25rem; margin: 40px 0 12px; }
+    h2 small { display: block; color: var(--suave); font-weight: 400; font-size: 0.9rem; margin-top: 2px; }
+    .legenda { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 0.85rem; color: var(--suave); }
+    .cartao {
+      background: var(--cartao);
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 12px 0;
+    }
+    .cartao h3 { margin: 0 0 6px; font-size: 1.05rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .cartao p, .cartao ul { margin: 6px 0 0; color: var(--texto); }
+    .cartao ul { padding-left: 20px; }
+    .cartao li { margin: 4px 0; }
+    .selo {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid currentColor;
+      white-space: nowrap;
+    }
+    .selo.existe { color: var(--existe); }
+    .selo.construir { color: var(--construir); }
+    .selo.validar { color: var(--validar); }
+    .selo.aberto { color: var(--aberto); }
+    .niveis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+    .nivel { border: 1px dashed var(--borda); border-radius: 10px; padding: 10px 12px; }
+    .nivel strong { display: block; }
+    .nivel span { color: var(--suave); font-size: 0.9rem; }
+    .fluxo {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      margin-top: 10px; font-size: 0.92rem;
+    }
+    .fluxo .no { background: #0f2146; border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; }
+    .fluxo .seta { color: var(--suave); }
+    .pilares { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+    .pilar { background: var(--cartao); border: 1px solid var(--borda); border-top: 3px solid var(--marca); border-radius: 12px; padding: 14px; }
+    .pilar strong { display: block; font-size: 1.05rem; }
+    .pilar span { color: var(--suave); font-size: 0.92rem; }
+    .subtitulo { margin: 24px 0 4px; font-size: 1.05rem; color: var(--suave); }
+    .tabela { overflow-x: auto; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; min-width: 520px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+    th { color: var(--suave); font-weight: 600; }
+    footer { margin-top: 48px; color: var(--suave); font-size: 0.85rem; border-top: 1px solid var(--borda); padding-top: 16px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Plano de melhoria do curso</h1>
+    <p class="sub">Estrutura do curso, anotada a partir da conversa com o Jonathan em 30/09/2026.</p>
+
+    <div class="legenda">
+      <span><span class="selo existe">já existe</span></span>
+      <span><span class="selo validar">em validação</span></span>
+      <span><span class="selo construir">a construir</span></span>
+      <span><span class="selo aberto">a detalhar</span></span>
+    </div>
+
+    <h2>Estrutura do curso<small>Quatro pilares, definidos pelo Jonathan em 30/09/2026.</small></h2>
+
+    <div class="pilares">
+      <div class="pilar"><strong>Cultura</strong><span>Livros e músicas</span></div>
+      <div class="pilar"><strong>Memorização</strong><span>Banco de palavras e Anki</span></div>
+      <div class="pilar"><strong>Curso</strong><span>As 3 séries</span></div>
+      <div class="pilar"><strong>Conversação</strong><span>O professor</span></div>
+    </div>
+
+    <h2>1. Cultura<small>Conteúdo livre: o aluno escolhe o que ler e ouvir.</small></h2>
+
+    <div class="cartao">
+      <h3>Livros <span class="selo existe">já existe</span></h3>
+      <ul>
+        <li>O aluno lê os livros dentro do app.</li>
+        <li>Marca palavras e trechos durante a leitura.</li>
+        <li>As palavras marcadas podem ir para a memorização.</li>
+        <li>O app acompanha em que parte do livro o aluno está.</li>
+      </ul>
+    </div>
+
+    <div class="cartao">
+      <h3>Músicas <span class="selo existe">já existe</span></h3>
+      <ul>
+        <li>O aluno escolhe músicas e lê as letras.</li>
+        <li>Marca palavras nas letras, do mesmo jeito que nos livros.</li>
+        <li>A prática dessas palavras é igual à das palavras dos livros.</li>
+      </ul>
+    </div>
+
+    <h2>2. Memorização<small>O que o aluno marcou vira prática de repetição.</small></h2>
+
+    <div class="cartao">
+      <h3>Banco de palavras <span class="selo existe">já existe</span></h3>
+      <ul>
+        <li>Reúne as palavras marcadas nos livros e nas músicas.</li>
+        <li>O aluno seleciona quais quer mandar para a prática.</li>
+        <li>Para cada palavra são criados pares de frases em português e em inglês.</li>
+      </ul>
+    </div>
+
+    <div class="cartao">
+      <h3>Anki <span class="selo existe">já existe</span></h3>
+      <ul>
+        <li>As palavras enviadas viram cartões de revisão.</li>
+        <li>O intervalo de repetição se ajusta ao desempenho do aluno.</li>
+      </ul>
+    </div>
+
+    <h2>3. Curso<small>A parte programática: uma série original por nível, cada uma com 3 temporadas.</small></h2>
+
+    <div class="cartao">
+      <h3>As 3 séries <span class="selo construir">a construir</span></h3>
+      <p>Cada temporada é um subnível.</p>
+      <div class="niveis">
+        <div class="nivel"><strong>Básico 1, 2 e 3</strong><span>Série de desenho animado · 3 temporadas</span></div>
+        <div class="nivel"><strong>Intermediário 1, 2 e 3</strong><span>Série de adolescentes que se tornam jovens · formato filme · 3 temporadas</span></div>
+        <div class="nivel"><strong>Avançado 1, 2 e 3</strong><span>Série sobre família e trabalho · formato filme · 3 temporadas</span></div>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <h3>Etapas de cada módulo <span class="selo construir">a construir</span></h3>
+      <p>Cada módulo tem várias etapas. Para concluir uma etapa, o aluno passa por três passos:</p>
+      <div class="fluxo" aria-label="Passos de uma etapa">
+        <span class="no">1 · Assistir ao episódio da série</span><span class="seta">→</span>
+        <span class="no">2 · Fazer as atividades online</span><span class="seta">→</span>
+        <span class="no">3 · Conversar 15 min com o professor</span>
+      </div>
+      <ul>
+        <li><strong>Atividades online</strong> do tipo das plataformas em geral: cliques, múltipla escolha, listenings e outras.</li>
+        <li><strong>A conversa com o professor fecha a etapa.</strong> Ela só acontece depois de cumprir o episódio e as atividades.</li>
+        <li><strong>Limite de uma etapa por dia,</strong> para dar o espaço necessário à memorização.</li>
+      </ul>
+    </div>
+
+    <div class="cartao">
+      <h3>Referência de mercado <span class="selo existe">pesquisado</span></h3>
+      <p>EF English Live usa 16 níveis curtos casados com o quadro europeu (A1 a C2). A Open English usa 8 níveis. As duas têm nivelamento na entrada, unidades temáticas em ordem fixa e certificado a cada nível. Dossiê em <code>docs/drs/curso/</code>.</p>
+    </div>
+
+    <h2>4. Conversação<small>O professor: a parte do curso em que o aluno fala.</small></h2>
+
+    <div class="cartao">
+      <h3>Professor <span class="selo validar">em validação</span></h3>
+      <ul>
+        <li>Conversa por voz, em tempo real, e por texto.</li>
+        <li>É acionado de duas formas: no fechamento de cada etapa e na aula particular do dia.</li>
+        <li>Conhece o contexto do aluno, que vem dos outros três pilares.</li>
+      </ul>
+      <div class="fluxo" aria-label="De onde vem o contexto do professor">
+        <span class="no">Cultura</span><span class="seta">+</span>
+        <span class="no">Memorização</span><span class="seta">+</span>
+        <span class="no">Curso</span><span class="seta">→</span>
+        <span class="no">Contexto do aluno</span><span class="seta">→</span>
+        <span class="no">Professor</span>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <h3>O que gera contexto para o professor <span class="selo existe">já existe</span></h3>
+      <ul>
+        <li>As músicas que o aluno escolhe para praticar.</li>
+        <li>As palavras que ele salva para repetir.</li>
+        <li>As revisões que ele faz no Anki.</li>
+        <li>Os trechos que ele marca nos livros.</li>
+        <li>O quanto ele avançou em cada livro.</li>
+      </ul>
+    </div>
+
+    <h3 class="subtitulo">Como o aluno aciona o professor</h3>
+
+    <div class="cartao">
+      <h3>A · Conversa de fechamento da etapa <span class="selo construir">a construir</span></h3>
+      <ul>
+        <li>15 minutos, ao final de cada etapa do curso.</li>
+        <li>Só depois de assistir ao episódio e cumprir as atividades.</li>
+        <li>No máximo uma por dia, junto com o limite de uma etapa por dia.</li>
+      </ul>
+    </div>
+
+    <div class="cartao">
+      <h3>B · Aula particular do dia <span class="selo construir">a construir</span></h3>
+      <ul>
+        <li>Uma vez por dia.</li>
+        <li>Sobre cultura: uma música ou um trecho de livro escolhido pelo aluno.</li>
+        <li>O professor ensina inglês dentro daquele trecho.</li>
+        <li>Sempre que possível, faz paralelo com o conteúdo programático que o aluno está estudando.</li>
+        <li>Também pode ser sobre tema livre, ou um tema sugerido pelo aluno na hora.</li>
+      </ul>
+    </div>
+
+    <div class="cartao">
+      <h3>Limite de uso do professor <span class="selo aberto">a definir</span></h3>
+      <ul>
+        <li>O uso é contado em blocos de 15 minutos.</li>
+        <li>O total por dia será definido depois.</li>
+      </ul>
+    </div>
+
+    <h2>5. Planos e custos<small>Para os planos de assinatura darem lucro. A estudar mais adiante.</small></h2>
+
+    <div class="cartao">
+      <h3>A estudar <span class="selo aberto">futuro</span></h3>
+      <ul>
+        <li><strong>Otimização dos tokens</strong> do professor, para reduzir o custo de cada sessão.</li>
+        <li><strong>Planos de vários tamanhos</strong>, desenhados para haver lucro.</li>
+        <li><strong>Limite diário de uso do professor</strong>, em blocos de 15 minutos.</li>
+      </ul>
+    </div>
+
+    <div class="cartao">
+      <h3>Custo estimado do professor <span class="selo existe">pesquisado</span></h3>
+      <ul>
+        <li>Cada bloco de 15 minutos custa de US$ 0,16 a US$ 0,90 em conta paga, conforme a otimização.</li>
+        <li>Duas sessões de 15 minutos por dia por aluno ficam entre US$ 0,32 e US$ 1,80.</li>
+        <li>O que mais pesa é o áudio da conversa relido a cada turno. Limitar o contexto que o modelo relê é a principal alavanca.</li>
+        <li>Hoje, na cota gratuita do Google, o custo é zero. Ela serve só para validar.</li>
+      </ul>
+    </div>
+
+    <div class="cartao">
+      <h3>Quanto o mercado cobra por mês, no Brasil <span class="selo existe">pesquisado</span></h3>
+      <div class="tabela">
+        <table>
+          <thead><tr><th>Produto</th><th>Anual, por mês</th><th>Mensal</th><th>Conversa com IA</th></tr></thead>
+          <tbody>
+            <tr><td>Duolingo Super</td><td>R$ 14,99</td><td>R$ 31,90</td><td>Videochamada com IA (informação conflitante)</td></tr>
+            <tr><td>Praktika</td><td>R$ 16,66</td><td>R$ 39,90</td><td>Sim, por voz</td></tr>
+            <tr><td>Speak Premium</td><td>R$ 24,99</td><td>R$ 39,90</td><td>Sim, com limite diário em alguns recursos</td></tr>
+            <tr><td>Speak Premium Plus</td><td>R$ 33,33</td><td>R$ 89,99</td><td>Sim, sem limite diário</td></tr>
+            <tr><td>Duolingo Max</td><td>R$ 33,33</td><td>—</td><td>Videochamada e roleplay</td></tr>
+            <tr><td>Cambly (aula humana)</td><td>—</td><td>a partir de R$ 92,50</td><td>Não, professor humano</td></tr>
+            <tr><td>Open English</td><td>R$ 220 a 285</td><td>contrato anual</td><td>Não, aula ao vivo com professor</td></tr>
+            <tr><td>EF English Live</td><td>R$ 750 a 1.024</td><td>contrato anual</td><td>Não, aula particular e em grupo</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li>No exterior, os apps de IA ficam entre US$ 5 e 14 por mês no plano anual.</li>
+        <li>O nosso curso junta séries, memorização e professor com aula diária. Fica entre o app de IA e o curso com professor humano.</li>
+        <li>Fontes de 30/09/2026, quase todas App Store e secundárias. Dossiê em <code>docs/drs/curso/</code>.</li>
+      </ul>
+    </div>
+
+    <footer>Versão de 30/09/2026 · quatro pilares, etapas do curso, acionamento do professor, planos e custos.</footer>
+  </main>
+</body>
+</html>
