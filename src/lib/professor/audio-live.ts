@@ -11,6 +11,13 @@ const TAXA_SAIDA = 24_000;
 /** 200 ms a 16 kHz. */
 const AMOSTRAS_POR_PEDACO = 3_200;
 
+// Ganho automático (02/10/2026): no celular a voz do aluno chegou com volume ~0,003 (RMS),
+// baixo demais para o Google perceber que ele falou. Leva a fala para perto do alvo.
+const VOLUME_ALVO = 0.05;
+const PISO_DE_RUIDO = 0.002;
+const GANHO_MAXIMO = 6;
+const GANHO_MINIMO = 0.2;
+
 // Roda na thread de áudio. Se o navegador não criar o contexto em 16 kHz, reduz
 // a taxa descartando amostras (qualidade suficiente para fala).
 const CODIGO_CAPTURA = `
@@ -32,14 +39,18 @@ class Captura16k extends AudioWorkletProcessor {
       }
     }
     if (this.buf.length >= ${AMOSTRAS_POR_PEDACO}) {
-      const pcm = new Int16Array(this.buf.length);
+      // Ganho automático por pedaço: fala baixa sobe (até ${GANHO_MAXIMO}x) e som alto — como a
+      // voz do professor vazando pelo alto-falante — desce. Silêncio fica como está.
       let soma = 0;
+      for (let i = 0; i < this.buf.length; i++) soma += this.buf[i] * this.buf[i];
+      const rms = Math.sqrt(soma / this.buf.length);
+      const ganho = rms > ${PISO_DE_RUIDO} ? Math.min(${GANHO_MAXIMO}, Math.max(${GANHO_MINIMO}, ${VOLUME_ALVO} / rms)) : 1;
+      const pcm = new Int16Array(this.buf.length);
       for (let i = 0; i < this.buf.length; i++) {
-        const s = Math.max(-1, Math.min(1, this.buf[i]));
+        const s = Math.max(-1, Math.min(1, this.buf[i] * ganho));
         pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-        soma += s * s;
       }
-      this.port.postMessage({ pcm: pcm.buffer, nivel: Math.sqrt(soma / this.buf.length) }, [pcm.buffer]);
+      this.port.postMessage({ pcm: pcm.buffer, nivel: rms }, [pcm.buffer]);
       this.buf = [];
     }
     return true;

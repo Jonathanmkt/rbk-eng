@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 
+import {
+  DECLARACAO_MEMORIZAR,
+  FERRAMENTA_MEMORIZAR,
+  lerMaterialMusica,
+  montarAulaDeMusica,
+} from '@/lib/professor/aula-musica';
 import { carregarFotoDoAluno } from '@/lib/professor/contexto';
+import { salvarParaMemorizar, trechosMarcadosNaMusica } from '@/lib/professor/memorizar';
 import { montarFotoDoAluno, PROFESSOR_PROMPT_FIXO } from '@/lib/professor/prompt';
 import { createClient } from '@/lib/supabase/server';
 
@@ -21,9 +28,11 @@ import { createClient } from '@/lib/supabase/server';
  * POST ?canal=<id> recebe um pedaço de áudio do microfone (PCM 16-bit, 16 kHz, mono).
  * O id do canal é um UUID aleatório que só o dono recebe: vale como credencial do canal.
  *
- * Sem ferramentas (function calling) de propósito: no teste de 30/09/2026 o
- * 3.1 Flash Live leu o nome da ferramenta em voz alta em vez de chamá-la. Tudo
- * o que o professor precisa saber do aluno entra nas instruções, no início.
+ * Dados do aluno entram nas instruções, no início, e não por ferramenta: no
+ * teste de 30/09/2026 o 3.1 Flash Live chegou a ler o nome da ferramenta em voz
+ * alta. Ferramenta só onde ela faz algo, e com pedido claro: na aula de música,
+ * `salvar_para_memorizar` (executada aqui, no servidor), chamada depois do "sim"
+ * do aluno. A aula de música vem da conversa aberta criada por /api/professor/aula.
  *
  * ⚠️ Tier gratuito: o Google pode usar o conteúdo para melhorar produtos. Só para validar.
  * ⚠️ O registro de canais vive na memória do processo: funciona com um processo só
@@ -54,15 +63,26 @@ type Evento =
   | { tipo: 'interrompido' }
   | { tipo: 'fimDeTurno' }
   | { tipo: 'expirando' }
+  | { tipo: 'salvo'; texto: string }
   | { tipo: 'erro'; texto: string }
   | { tipo: 'fim' };
 
-type Canal = { ws: WebSocket; userId: string; aberto: boolean };
+type Canal = {
+  ws: WebSocket;
+  userId: string;
+  aberto: boolean;
+  /** Diagnóstico do microfone: pacotes, descartados e maior volume (RMS) desde o último resumo. */
+  mic: { pacotes: number; descartados: number; picoRms: number };
+  /** Último pedaço de áudio recebido do navegador (detecta ligação sem dono). */
+  ultimoPacote: number;
+};
 
 type MensagemLive = {
   setupComplete?: unknown;
   goAway?: unknown;
   sessionResumptionUpdate?: { newHandle?: string; resumable?: boolean };
+  toolCallCancellation?: { ids?: string[] };
+  toolCall?: { functionCalls?: { id?: string; name?: string; args?: Record<string, unknown> }[] };
   serverContent?: {
     inputTranscription?: { text?: string };
     outputTranscription?: { text?: string };
@@ -89,12 +109,14 @@ export async function GET(request: Request) {
   const { data: aberta } = await supabase
     .schema('tutor')
     .from('sessions')
-    .select('id')
+    .select('id, kind, material')
     .is('ended_at', null)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
   let sessaoId: string;
+  // Aula de música: a conversa aberta foi criada por /api/professor/aula com a letra.
+  const musica = aberta?.kind === 'musica' ? lerMaterialMusica(aberta.material) : null;
   if (aberta) {
     sessaoId = aberta.id;
   } else {
@@ -126,7 +148,22 @@ export async function GET(request: Request) {
       historico.map((t) => `${t.role === 'user' ? 'Aluno' : 'Professor'}: ${t.content}`).join('\n')
     : '';
 
-  const instrucoes = [PROFESSOR_PROMPT_FIXO, montarFotoDoAluno(foto), MODO_VOZ_LIVE, conversaAteAgora]
+  // Aula de música: o prompt próprio dela SUBSTITUI as instruções gerais (não se soma).
+  const instrucoes = (
+    musica
+      ? [
+          montarAulaDeMusica(
+            musica,
+            {
+              nome: foto.nome,
+              palavrasMarcadas: await trechosMarcadosNaMusica(supabase, musica.letra),
+            },
+            'voz'
+          ),
+          conversaAteAgora,
+        ]
+      : [PROFESSOR_PROMPT_FIXO, montarFotoDoAluno(foto), MODO_VOZ_LIVE, conversaAteAgora]
+  )
     .filter(Boolean)
     .join('\n\n');
 
@@ -147,8 +184,22 @@ export async function GET(request: Request) {
     falaAluno = '';
     falaProfessor = '';
     if (!turnos.length) return;
-    const linhas = turnos.map((t) => ({ session_id: sessaoId, idx: proximoIdx++, ...t }));
-    const { error } = await supabase.schema('tutor').from('session_turns').insert(linhas);
+    let linhas = turnos.map((t) => ({ session_id: sessaoId, idx: proximoIdx++, ...t }));
+    let { error } = await supabase.schema('tutor').from('session_turns').insert(linhas);
+    if (error?.code === '23505') {
+      // Posição já ocupada (outra ligação gravou na mesma conversa): recomeça do fim real.
+      const { data: ultimo } = await supabase
+        .schema('tutor')
+        .from('session_turns')
+        .select('idx')
+        .eq('session_id', sessaoId)
+        .order('idx', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      proximoIdx = (ultimo?.idx ?? -1) + 1;
+      linhas = turnos.map((t) => ({ session_id: sessaoId, idx: proximoIdx++, ...t }));
+      ({ error } = await supabase.schema('tutor').from('session_turns').insert(linhas));
+    }
     if (error) console.error('[professor-live] gravar turnos', error);
     await supabase.schema('tutor').from('sessions').update({ updated_at: new Date().toISOString() }).eq('id', sessaoId);
   };
@@ -174,6 +225,7 @@ export async function GET(request: Request) {
         }
       };
       const encerrar = () => {
+        clearInterval(vigia);
         if (fechado) return;
         enviar({ tipo: 'fim' });
         fecharTudo();
@@ -186,6 +238,40 @@ export async function GET(request: Request) {
       // Com a chave de retomada (`sessionResumptionUpdate`), abrimos a ligação
       // seguinte e a conversa continua de onde estava, sem o aluno perceber.
       // Testado em 30/09/2026: a ligação retomada lembrou o que foi dito na anterior.
+      // ── Diagnóstico (02/10/2026): o CEO relatou o professor parando de responder. ──
+      // Registra cada evento da ligação, com tempo relativo, e um alarme quando o aluno
+      // falou e o professor não começou a responder em 8 s.
+      const inicio = Date.now();
+      const registro = (...partes: unknown[]) =>
+        console.log(`[professor-live ${canalId.slice(0, 8)} +${((Date.now() - inicio) / 1000).toFixed(1)}s]`, ...partes);
+      let audiosNoTurno = 0;
+      let alunoFalouEm = 0;
+      let professorRespondeuEm = 0;
+      let avisouSilencio = false;
+      const vigia = setInterval(() => {
+        const canal = canais.get(canalId);
+        // Ligação sem dono: o navegador parou de mandar áudio (aba fechada, efeito duplicado
+        // do React em dev, rede caída). Sem isto ela segue falando sozinha e gastando cota.
+        if (canal?.aberto && Date.now() - (canal.ultimoPacote ?? 0) > 15_000) {
+          registro('navegador parou de mandar áudio há 15 s — encerrando a ligação sem dono');
+          encerrar();
+          return;
+        }
+        if (canal && canal.mic.pacotes + canal.mic.descartados > 0) {
+          registro(
+            `microfone: ${canal.mic.pacotes} pacote(s) enviados, ${canal.mic.descartados} descartados, pico de volume ${canal.mic.picoRms.toFixed(3)}`
+          );
+          canal.mic = { pacotes: 0, descartados: 0, picoRms: 0 };
+        }
+        if (alunoFalouEm && professorRespondeuEm < alunoFalouEm && Date.now() - alunoFalouEm > 8000 && !avisouSilencio) {
+          avisouSilencio = true;
+          registro(
+            `⚠️ SEM RESPOSTA: o aluno falou há ${((Date.now() - alunoFalouEm) / 1000).toFixed(1)}s e o professor não começou a responder`
+          );
+        }
+      }, 5000);
+      request.signal.addEventListener('abort', () => clearInterval(vigia));
+
       let chaveDeRetomada: string | null = null;
       let retomadas = 0;
       const MAX_RETOMADAS = 20;
@@ -194,7 +280,18 @@ export async function GET(request: Request) {
         const socket = new WebSocket(`${URL_LIVE}?key=${chave}`);
         let substituida = false;
         ws = socket;
-        canais.set(canalId, { ws: socket, userId, aberto: false });
+        canais.set(canalId, {
+          ws: socket,
+          userId,
+          aberto: false,
+          mic: { pacotes: 0, descartados: 0, picoRms: 0 },
+          ultimoPacote: Date.now(),
+        });
+        registro(
+          retomando
+            ? `abrindo ligação (retomada nº ${retomadas})`
+            : `abrindo ligação · modelo ${MODELO} · ${musica ? 'aula de música' : 'conversa livre'}`
+        );
 
         const retomar = () => {
           if (substituida || fechado || !chaveDeRetomada || retomadas >= MAX_RETOMADAS) return false;
@@ -222,9 +319,21 @@ export async function GET(request: Request) {
                 outputAudioTranscription: {},
                 // Retomada: a primeira ligação pede a chave; as seguintes usam a última recebida.
                 sessionResumption: retomando && chaveDeRetomada ? { handle: chaveDeRetomada } : {},
+                // Detecção de fala (02/10/2026): no celular a voz do aluno chegou muito baixa e o
+                // Google demorou a perceber que ele falou. Início mais sensível; fim mais paciente,
+                // para não cortar o aluno que pensa no meio da frase.
+                realtimeInputConfig: {
+                  automaticActivityDetection: {
+                    startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
+                    endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
+                    silenceDurationMs: 700,
+                  },
+                },
                 // Compressão do contexto: a aula pode passar do teto de uma ligação sem estourar a janela.
                 contextWindowCompression: { slidingWindow: {} },
                 systemInstruction: { parts: [{ text: instrucoes }] },
+                // Aula de música: o professor guarda expressões no banco e na revisão.
+                ...(musica ? { tools: [{ functionDeclarations: [DECLARACAO_MEMORIZAR] }] } : {}),
               },
             })
           );
@@ -239,6 +348,7 @@ export async function GET(request: Request) {
             return;
           }
           if (j.setupComplete !== undefined) {
+            registro('setup aceito pelo Google');
             const canal = canais.get(canalId);
             if (canal) canal.aberto = true;
             if (retomando) return; // conversa continua; nada de novo cumprimento
@@ -246,7 +356,9 @@ export async function GET(request: Request) {
             // O professor fala primeiro.
             const abertura = historico.length
               ? '(o aluno voltou, agora por voz; retome a aula de onde parou)'
-              : '(o aluno abriu a conversa por voz)';
+              : musica
+                ? '(o aluno abriu a aula desta música; comece pelo quebra-gelo, em português)'
+                : '(o aluno abriu a conversa por voz)';
             socket.send(
               JSON.stringify({
                 clientContent: { turns: [{ role: 'user', parts: [{ text: abertura }] }], turnComplete: true },
@@ -257,8 +369,40 @@ export async function GET(request: Request) {
           if (j.sessionResumptionUpdate?.resumable !== false && j.sessionResumptionUpdate?.newHandle) {
             chaveDeRetomada = j.sessionResumptionUpdate.newHandle;
           }
+          // O professor pediu para guardar uma expressão: executa aqui e devolve o resultado.
+          // O modelo espera a resposta antes de seguir falando.
+          if (j.toolCallCancellation) registro('ferramenta cancelada pelo Google', JSON.stringify(j.toolCallCancellation));
+          if (j.toolCall?.functionCalls?.length) {
+            const t0 = Date.now();
+            registro('ferramenta pedida:', j.toolCall.functionCalls.map((f) => `${f.name} ${JSON.stringify(f.args)}`).join(' | '));
+            const respostas = await Promise.all(
+              j.toolCall.functionCalls.map(async (f) => {
+                if (f.name !== FERRAMENTA_MEMORIZAR) {
+                  return { id: f.id, name: f.name, response: { ok: false, motivo: 'ferramenta desconhecida' } };
+                }
+                const a = f.args ?? {};
+                const r = await salvarParaMemorizar(supabase, {
+                  expressao: String(a.expressao ?? ''),
+                  linhaDaLetra: String(a.linha_da_letra ?? ''),
+                  traducao: String(a.traducao ?? ''),
+                });
+                if (r.ok) enviar({ tipo: 'salvo', texto: r.expressao });
+                return { id: f.id, name: f.name, response: r };
+              })
+            );
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({ toolResponse: { functionResponses: respostas } }));
+              registro(`ferramenta respondida em ${Date.now() - t0} ms:`, JSON.stringify(respostas.map((r) => r.response)));
+            } else {
+              registro('⚠️ ferramenta executada, mas a ligação já estava fechada — resposta não enviada');
+            }
+            return;
+          }
           const sc = j.serverContent;
           if (sc?.inputTranscription?.text) {
+            if (!falaAluno) registro('aluno começou a falar');
+            alunoFalouEm = Date.now();
+            avisouSilencio = false;
             falaAluno += sc.inputTranscription.text;
             enviar({ tipo: 'voce', texto: sc.inputTranscription.text });
           }
@@ -267,13 +411,32 @@ export async function GET(request: Request) {
             enviar({ tipo: 'ele', texto: sc.outputTranscription.text });
           }
           for (const p of sc?.modelTurn?.parts ?? []) {
-            if (p.inlineData?.data) enviar({ tipo: 'audio', pcm: p.inlineData.data });
+            if (p.inlineData?.data) {
+              if (!audiosNoTurno) {
+                professorRespondeuEm = Date.now();
+                registro(
+                  alunoFalouEm
+                    ? `professor começou a falar (${((Date.now() - alunoFalouEm) / 1000).toFixed(1)}s após a última fala do aluno)`
+                    : 'professor começou a falar'
+                );
+              }
+              audiosNoTurno++;
+              enviar({ tipo: 'audio', pcm: p.inlineData.data });
+            }
           }
-          if (sc?.interrupted) enviar({ tipo: 'interrompido' });
+          if (sc?.interrupted) {
+            registro('aluno interrompeu o professor');
+            enviar({ tipo: 'interrompido' });
+          }
           if (sc?.turnComplete) {
+            registro(
+              `fim de turno · aluno: "${falaAluno.trim().slice(0, 80)}" · professor: ${audiosNoTurno} pedaço(s) de áudio, "${falaProfessor.trim().slice(0, 80)}"`
+            );
+            audiosNoTurno = 0;
             enviar({ tipo: 'fimDeTurno' });
             void gravar();
           }
+          if (j.goAway) registro('Google avisou fim da ligação (goAway)');
           if (j.goAway && !retomar()) enviar({ tipo: 'expirando' });
         };
 
@@ -281,6 +444,9 @@ export async function GET(request: Request) {
           if (!substituida) console.error('[professor-live] erro no websocket');
         };
         socket.onclose = (ev) => {
+          registro(
+            `ligação fechada · código ${ev.code}${ev.reason ? ` · ${String(ev.reason).slice(0, 160)}` : ''}${substituida ? ' (substituída por retomada)' : ''}`
+          );
           if (substituida || fechado) return;
           // Queda inesperada: tenta retomar antes de desistir.
           if (ev.code !== 1000) {
@@ -321,12 +487,28 @@ export async function POST(request: Request) {
   const canalId = new URL(request.url).searchParams.get('canal') ?? '';
   const canal = canais.get(canalId);
   if (!canal) return NextResponse.json({ erro: 'Canal encerrado.' }, { status: 410 });
-  if (!canal.aberto || canal.ws.readyState !== WebSocket.OPEN) return new Response(null, { status: 204 });
+  // Canal aberto por uma versão anterior do código (recarga do `next dev`) pode não ter o contador.
+  canal.mic ??= { pacotes: 0, descartados: 0, picoRms: 0 };
+  canal.ultimoPacote = Date.now();
+  if (!canal.aberto || canal.ws.readyState !== WebSocket.OPEN) {
+    canal.mic.descartados++;
+    return new Response(null, { status: 204 });
+  }
 
   const audio = Buffer.from(await request.arrayBuffer());
   if (!audio.length || audio.length > 256 * 1024) {
     return NextResponse.json({ erro: 'Áudio inválido.' }, { status: 400 });
   }
+
+  // Volume do pedaço (RMS de PCM 16-bit) — só para o diagnóstico.
+  let soma = 0;
+  const amostras = Math.floor(audio.length / 2);
+  for (let i = 0; i < amostras; i++) {
+    const v = audio.readInt16LE(i * 2) / 32768;
+    soma += v * v;
+  }
+  canal.mic.pacotes++;
+  canal.mic.picoRms = Math.max(canal.mic.picoRms, Math.sqrt(soma / Math.max(1, amostras)));
 
   canal.ws.send(
     JSON.stringify({ realtimeInput: { audio: { mimeType: 'audio/pcm;rate=16000', data: audio.toString('base64') } } })
