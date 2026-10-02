@@ -319,16 +319,6 @@ export async function GET(request: Request) {
                 outputAudioTranscription: {},
                 // Retomada: a primeira ligação pede a chave; as seguintes usam a última recebida.
                 sessionResumption: retomando && chaveDeRetomada ? { handle: chaveDeRetomada } : {},
-                // Detecção de fala (02/10/2026): no celular a voz do aluno chegou muito baixa e o
-                // Google demorou a perceber que ele falou. Início mais sensível; fim mais paciente,
-                // para não cortar o aluno que pensa no meio da frase.
-                realtimeInputConfig: {
-                  automaticActivityDetection: {
-                    startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
-                    endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
-                    silenceDurationMs: 700,
-                  },
-                },
                 // Compressão do contexto: a aula pode passar do teto de uma ligação sem estourar a janela.
                 contextWindowCompression: { slidingWindow: {} },
                 systemInstruction: { parts: [{ text: instrucoes }] },

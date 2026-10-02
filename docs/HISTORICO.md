@@ -6,6 +6,14 @@ recentes primeiro.
 
 ---
 
+## 2026-10-02 — Reverte o ganho do microfone e a detecção de fala da voz ao vivo
+
+**O quê:** Saiu o ganho automático por pedaço no microfone (`audio-live.ts`) e a `realtimeInputConfig` (sensibilidade de início/fim de fala) da ponte (`live/route.ts`). O PCM volta cru, como em 30/09. Ficam os registros de diagnóstico e o encerramento de ligação sem dono, da entrada logo abaixo.
+**Por quê:** Os logs de produção do dia mostraram que o ganho levava o ruído ambiente ao nível de fala (volume travado em 0,050); o Google concluía que o aluno nunca parava de falar e o professor deixou de responder. Voltou-se à configuração que funcionava. A baixa amplitude da voz no celular, que motivou o ganho, continua sem solução. Esta entrada corrige o item 3 da entrada seguinte quanto a "detecção de fala mais sensível e ganho automático".
+**Arquivos-chave:** `src/lib/professor/audio-live.ts`, `src/app/api/professor/live/route.ts`.
+
+---
+
 ## 2026-10-02 — Aula de música com o professor, frases do cartão por DeepSeek e voz mais estável
 
 **O quê:** (1) A tela de música ganhou o botão "Aula": `/api/professor/aula` cria uma sessão `kind = 'musica'` com a letra como material (colunas `kind` e `material` em `tutor.sessions`, migration `tutor_sessions_tipo_e_material` via MCP; tipos à mão em `database.types.ts`). A aula usa um prompt enxuto próprio (`src/lib/professor/aula-musica.ts`), conduzida em português, que substitui as instruções gerais nas rotas de voz e texto. A ferramenta `salvar_para_memorizar` roda no servidor (`memorizar.ts`): grava no banco de palavras, no baralho "Músicas" e aciona a Edge Function; o painel mostra badges do que foi salvo e abre por evento (`abrir-professor.ts`). A barra da música passou a ter voltar + Ouvir/Traduzir/Aula, sem o texto de orientação. (2) A Edge Function `enviar-cards` gera as frases com DeepSeek V4.1 Flash (raciocínio desligado), com gpt-4o-mini de reserva; já publicada (v4) com o segredo `DEEPSEEK_API_KEY` no Supabase. (3) Voz ao vivo: registros por evento na ponte, alarme de "sem resposta", encerramento de ligação sem dono após 15 s, gravação que se recupera de posição duplicada, detecção de fala mais sensível e ganho automático no microfone.
