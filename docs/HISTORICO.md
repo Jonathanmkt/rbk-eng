@@ -6,6 +6,14 @@ recentes primeiro.
 
 ---
 
+## 2026-09-30 — Professor de inglês por voz (Gemini Live) e início reformulado
+
+**O quê:** O início ganhou o card genérico "Lição atual", menu de perfil no canto superior direito e barra mobile em todas as telas. Nasceu o professor de inglês: modo texto com DeepSeek (`/api/professor`) e conversa por voz em tempo real com Gemini Live (`/api/professor/live`, uma ponte servidor que mantém a chave fora do navegador), num painel em sheet de baixo com rosto e onda de áudio. Banco: schema `tutor` (`sessions`, `session_turns`) criado por migration via MCP; o repo não versiona migrations, então os tipos entraram à mão em `database.types.ts`. Ambiente local: `.npmrc` sobe o limite de cabeçalho do Node (erro 431 por cookies de vários apps em localhost), `allowedDevOrigins` abre o app pelo celular na rede. Pesquisa (DRs do professor e do curso) e plano de melhoria do curso foram versionados em `docs/`.
+**Por quê:** O CEO decidiu, depois de testar, que o professor por voz é a Gemini Live sozinha (ouvido, cérebro e boca num modelo só), sem cascata STT→LLM→TTS — menos latência e menos peças. O modo texto segue no DeepSeek com raciocínio desligado (ligado, a primeira palavra demora 2,5–4 s). Os motivos do "card genérico" e do menu de perfil não foram documentados à época; o menu e a barra mobile unificada seguem a ideia de navegação igual em todas as telas.
+**Arquivos-chave:** `src/app/api/professor/`, `src/lib/professor/`, `src/app/(app)/protected/` (conversa-fab, use-conversa, modo-voz-live), `src/lib/database.types.ts`, `.claude/dev/MEMORIA.md`.
+
+---
+
 ## 2026-07-30 — A skill de design system deixa de ser molde em branco (e volta a carregar)
 
 **O quê:** A skill local `.claude/skills/design-system` foi reescrita por inteiro, agora descrevendo

@@ -367,6 +367,92 @@ export type Database = {
       [_ in never]: never
     }
   }
+  // ⚠️ Bloco escrito à mão (não gerado), como o `anki` e o `leitor` — o gerador só devolve o `public`.
+  // Espelha a migration `create_tutor_conversas` (30/09/2026).
+  tutor: {
+    Tables: {
+      sessions: {
+        Row: {
+          id: string
+          user_id: string
+          started_at: string
+          updated_at: string
+          ended_at: string | null
+          model: string | null
+          usage: Json
+          summary: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          started_at?: string
+          updated_at?: string
+          ended_at?: string | null
+          model?: string | null
+          usage?: Json
+          summary?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          started_at?: string
+          updated_at?: string
+          ended_at?: string | null
+          model?: string | null
+          usage?: Json
+          summary?: string | null
+        }
+        Relationships: []
+      }
+      session_turns: {
+        Row: {
+          id: string
+          session_id: string
+          idx: number
+          role: 'user' | 'assistant'
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          idx: number
+          role: 'user' | 'assistant'
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          idx?: number
+          role?: 'user' | 'assistant'
+          content?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_turns_session_id_fkey'
+            columns: ['session_id']
+            isOneToOne: false
+            referencedRelation: 'sessions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       profiles: {

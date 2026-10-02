@@ -58,6 +58,8 @@ Crie um `.env.local` na raiz com:
 | `SUPABASE_JWKS_URL` | URL do JWKS do projeto Supabase (validação de sessão) |
 | `AZURE_TRANSLATOR_KEY` / `AZURE_TRANSLATOR_REGION` | Tradução (Azure Translator) usada no leitor e na música |
 | `OPENAI_API_KEY` | Explicações contextuais de tradução |
+| `DEEPSEEK_API_KEY` | Professor de inglês no modo texto — **somente server** |
+| `GOOGLE_AI_API_KEY` | Professor por voz em tempo real (Gemini Live) — **somente server**. `GEMINI_LIVE_MODEL` e `GEMINI_LIVE_VOICE` são opcionais |
 
 > `.env*` está no `.gitignore`. Nunca commite segredos.
 >
