@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { BookOpen, Home, Library, Music, Vault } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { isImmersiveRoute } from '@/lib/mobile';
 
 const ITEMS = [
   { title: 'Início', href: '/protected', icon: Home, exact: true },
@@ -18,19 +17,17 @@ const ITEMS = [
 /**
  * Envolve o conteúdo das rotas autenticadas e adiciona a bottom bar no mobile.
  * O sidebar continua sendo a navegação no desktop (md+); a bottom bar é o
- * equivalente mobile — some nas telas imersivas (leitor, estudo).
+ * equivalente mobile e aparece em TODAS as telas logadas (decisão do CEO,
+ * 30/09/2026 — antes sumia no leitor e no estudo).
  */
 export function AppMobileShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const immersive = isImmersiveRoute(pathname);
 
   return (
     <>
       {/* Espaço p/ a bottom bar fixa não cobrir o fim do conteúdo (só no mobile) */}
-      <div className={cn('flex min-h-0 flex-1 flex-col', !immersive && 'pb-16 md:pb-0')}>
-        {children}
-      </div>
-      {!immersive && <BottomBar pathname={pathname} />}
+      <div className="flex min-h-0 flex-1 flex-col pb-16 md:pb-0">{children}</div>
+      <BottomBar pathname={pathname} />
     </>
   );
 }

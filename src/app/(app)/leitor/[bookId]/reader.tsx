@@ -502,7 +502,7 @@ export function Reader({
             className={cn(
               'z-30 rounded-lg border bg-popover p-2 text-popover-foreground shadow-md',
               isMobile
-                ? 'fixed inset-x-3 bottom-3'
+                ? 'fixed inset-x-3 bottom-[calc(4rem+0.75rem+env(safe-area-inset-bottom))]'
                 : 'absolute w-[300px] -translate-x-1/2'
             )}
             style={isMobile ? undefined : { left: sel.pos.left, top: Math.min(sel.pos.top, 9999) }}

@@ -119,6 +119,10 @@ Mesma regra de ouro: **o movimento mora no token, nunca solto na tela.** Tokens 
 | `tabContentVariants` | entrada do conteúdo ao trocar de aba |
 | `listContainer` / `listItem` | lista em cascata |
 
+Animação em CSS puro (sem framer-motion) também mora no token: `--animate-*` dentro do
+`@theme inline` do `globals.css`, com o `@keyframes` junto. Hoje: `animate-wave` (barras de onda
+de áudio que sobem e descem, defasadas por `--wave-delay`), usada no botão de conversa do início.
+
 **Princípios:** mola > tempo fixo · 150–320ms · animar só `transform`/`opacity` (ou `layout`) · em
 lista com scroll infinito, animar o **item**, não o container.
 

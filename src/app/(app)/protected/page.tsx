@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConversaFab } from './conversa-fab';
+import { LicaoAtualCard } from './licao-atual';
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -12,59 +12,31 @@ export default async function ProtectedPage() {
     redirect('/auth/login');
   }
 
-  const email = data.claims.email as string | undefined;
   const userId = data.claims.sub as string | undefined;
 
-  // Perfil (roles / permissions / access_level) — criado pelo trigger no cadastro.
+  // Só o nome, para a saudação — o resto do perfil vive no menu do canto superior direito.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('nome_completo, roles, access_level, status')
+    .select('nome_completo')
     .eq('id', userId ?? '')
     .single();
 
-  const roles = (profile?.roles as string[] | null) ?? [];
+  const primeiroNome = profile?.nome_completo?.split(' ')[0] ?? null;
 
   return (
-    <main className="flex w-full flex-1 flex-col items-center justify-center gap-6 p-6">
-      <div className="flex items-center gap-2.5">
-        <span className="flex size-9 items-center justify-center rounded-lg bg-brand text-lg font-bold text-brand-foreground">
-          F
-        </span>
-        <span className="text-lg font-semibold">Família Figueiredo</span>
-      </div>
+    <main className="mx-auto flex w-full flex-1 max-w-3xl flex-col gap-6 p-6">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {primeiroNome ? `Olá, ${primeiroNome}` : 'Início'}
+        </h1>
+        <p className="text-sm text-muted-foreground">Continue de onde parou.</p>
+      </header>
 
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-xl">Você está logado ✓</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-muted-foreground">Email</span>
-            <span className="font-medium">{email}</span>
-          </div>
+      {/* Lição atual: por enquanto conteúdo genérico, até existir a fonte de lições. */}
+      <LicaoAtualCard />
 
-          {profile && (
-            <div className="flex flex-col gap-2 rounded-lg border p-3">
-              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Perfil (autorização)
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                {roles.map((r) => (
-                  <Badge key={r} variant="secondary">
-                    {r}
-                  </Badge>
-                ))}
-                <Badge variant="outline">nível {profile.access_level}</Badge>
-                <Badge variant="success">{profile.status}</Badge>
-              </div>
-            </div>
-          )}
-
-          <p className="text-sm text-muted-foreground">
-            Use o menu lateral para navegar entre os módulos.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Conversa em tempo real: botão flutuante, painel genérico até o módulo existir. */}
+      <ConversaFab />
     </main>
   );
 }
