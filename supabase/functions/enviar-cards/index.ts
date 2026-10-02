@@ -1,5 +1,8 @@
 // Edge Function: enviar-cards
-// Gera 1 card por palavra selecionada (gpt-4o-mini), insere no baralho e liga em word_bank.card_id.
+// Gera 1 card por palavra selecionada, insere no baralho e liga em word_bank.card_id.
+// Modelo: DeepSeek V4.1 Flash (raciocínio desligado), decisão do CEO em 02/10/2026; se a
+// DeepSeek falhar ou faltar a chave, cai no gpt-4o-mini. Comparados em 02/10/2026 com 5
+// expressões de letras de música: qualidade equivalente, DeepSeek igual ou mais rápida.
 // Roda em segundo plano (EdgeRuntime.waitUntil) e retorna 202 na hora. Conclusão por email (Etapa 6).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -12,14 +15,35 @@ type Entry = {
 
 type Generated = { sentence_en: string; sentence_pt: string };
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+type Provedor = { nome: string; url: string; chave: string; modelo: string; extra?: Record<string, unknown> };
+
+/** Ordem de tentativa: DeepSeek primeiro, OpenAI como reserva. Só entra quem tem chave. */
+function provedores(): Provedor[] {
+  const lista: Provedor[] = [];
+  const deepseek = Deno.env.get('DEEPSEEK_API_KEY');
+  if (deepseek) {
+    lista.push({
+      nome: 'deepseek',
+      url: 'https://api.deepseek.com/chat/completions',
+      chave: deepseek,
+      modelo: 'deepseek-flash',
+      // Sem raciocínio: a tarefa é mecânica e o raciocínio só atrasa e encarece.
+      extra: { thinking: { type: 'disabled' } },
+    });
+  }
+  const openai = Deno.env.get('OPENAI_API_KEY');
+  if (openai) {
+    lista.push({ nome: 'openai', url: 'https://api.openai.com/v1/chat/completions', chave: openai, modelo: 'gpt-4o-mini' });
+  }
+  return lista;
+}
 
 /** A palavra-alvo precisa vir marcada com **...** na frase inglesa. */
 function isValid(g: Generated): boolean {
   return /\*\*[^*]+\*\*/.test(g.sentence_en) && g.sentence_pt.trim().length > 0;
 }
 
-async function gerarFrase(entry: Entry, apiKey: string): Promise<Generated | null> {
+async function gerarFrase(entry: Entry, lista: Provedor[]): Promise<Generated | null> {
   const alvoLang = entry.language === 'en-US' ? 'inglês' : 'português';
   const system =
     `Você cria frases de treino para estudo de idiomas. A palavra/expressão-alvo está em ${alvoLang}. ` +
@@ -33,27 +57,34 @@ async function gerarFrase(entry: Entry, apiKey: string): Promise<Generated | nul
     `Expressão-alvo: "${entry.selected_text}"\n` +
     `Parágrafo de contexto: """${entry.paragraph_context ?? ''}"""`;
 
-  for (let tentativa = 0; tentativa < 2; tentativa++) {
-    try {
-      const res = await fetch(OPENAI_URL, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          temperature: 0.4,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
-          ],
-        }),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? '{}') as Generated;
-      if (isValid(parsed)) return parsed;
-    } catch (_) {
-      // tenta de novo
+  // Duas tentativas em cada provedor, na ordem; o primeiro resultado válido vale.
+  for (const p of lista) {
+    for (let tentativa = 0; tentativa < 2; tentativa++) {
+      try {
+        const res = await fetch(p.url, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${p.chave}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: p.modelo,
+            temperature: 0.4,
+            response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: user },
+            ],
+            ...p.extra,
+          }),
+        });
+        if (!res.ok) {
+          console.error(`enviar-cards: ${p.nome} respondeu ${res.status}`);
+          continue;
+        }
+        const data = await res.json();
+        const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? '{}') as Generated;
+        if (isValid(parsed)) return parsed;
+      } catch (_) {
+        // tenta de novo
+      }
     }
   }
   return null;
@@ -81,9 +112,9 @@ async function processar(
   entryIds: string[],
   deckId: string
 ) {
-  const apiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!apiKey) {
-    console.error('OPENAI_API_KEY ausente');
+  const lista = provedores();
+  if (!lista.length) {
+    console.error('enviar-cards: nenhuma chave de modelo (DEEPSEEK_API_KEY ou OPENAI_API_KEY)');
     return;
   }
 
@@ -100,7 +131,7 @@ async function processar(
   let falhas = 0;
 
   for (const entry of (entries ?? []) as Entry[]) {
-    const gerado = await gerarFrase(entry, apiKey);
+    const gerado = await gerarFrase(entry, lista);
     if (!gerado) {
       falhas++;
       continue;
