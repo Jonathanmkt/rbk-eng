@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { EVENTO_ABRIR_PROFESSOR, type PedidoAbrirProfessor } from './abrir-professor';
 import { ModoVozLive } from './modo-voz-live';
 import { OndaDeAudio } from './onda-de-audio';
 import { RostoProfessor, type EstadoRosto } from './rosto-professor';
@@ -133,43 +134,69 @@ function PainelConversa({
 }
 
 /**
- * Botão flutuante (canto inferior direito) que abre a conversa com o professor,
- * por texto ou por voz (botão de microfone no painel).
+ * O professor: botão flutuante (canto inferior direito) que abre a conversa, por
+ * texto ou por voz (botão de microfone no painel).
  *
  * O painel sobe de baixo, com a largura toda e 95% da altura da tela (decisão
  * do CEO, 30/09/2026). O rosto do professor fica no topo, sempre; no modo voz
  * ele segue o estado da voz (ouvindo, pensando, falando).
  *
- * No mobile ele fica acima da bottom bar (que tem 4rem); no desktop, no canto.
+ * Outras telas abrem o professor pelo evento `abrirProfessor()` (ver
+ * abrir-professor.ts) — a tela de música, por exemplo, depois de criar uma aula.
+ * Com `mostrarBotao={false}` o componente fica só ouvindo esse evento.
+ *
+ * No mobile o botão fica acima da bottom bar (que tem 4rem); no desktop, no canto.
  * As barras ondulam no hover e no foco (via `group`).
  */
-export function ConversaFab() {
+export function ConversaFab({ mostrarBotao = true }: { mostrarBotao?: boolean }) {
   const conversa = useConversa();
   const iniciou = useRef(false);
+  const [aberto, setAberto] = useState(false);
   const [voz, setVoz] = useState(false);
   const [rostoVoz, setRostoVoz] = useState<EstadoRosto>('parado');
   const rostoTexto: EstadoRosto = conversa.pensando ? 'pensando' : conversa.respondendo ? 'falando' : 'parado';
   const estadoRosto = voz ? rostoVoz : rostoTexto;
 
   // Primeira abertura: retoma a conversa guardada ou o professor abre a aula.
-  const aoMudar = (aberto: boolean) => {
-    if (aberto && !iniciou.current) {
+  const aoMudar = (abrir: boolean) => {
+    setAberto(abrir);
+    if (abrir && !iniciou.current) {
       iniciou.current = true;
       void conversa.retomar();
     }
   };
 
+  // Aberto por outra tela: a aula já foi criada; recarrega a conversa e vai direto para a voz.
+  const recarregarRef = useRef(conversa.recarregar);
+  useEffect(() => {
+    recarregarRef.current = conversa.recarregar;
+  }, [conversa.recarregar]);
+  useEffect(() => {
+    const abrir = (e: Event) => {
+      const { voz: comVoz } = (e as CustomEvent<PedidoAbrirProfessor>).detail ?? {};
+      iniciou.current = true;
+      setVoz(false); // desmonta uma voz anterior para religar já na aula nova
+      void recarregarRef.current();
+      setAberto(true);
+      if (comVoz) setTimeout(() => setVoz(true), 0);
+    };
+    window.addEventListener(EVENTO_ABRIR_PROFESSOR, abrir);
+    return () => window.removeEventListener(EVENTO_ABRIR_PROFESSOR, abrir);
+  }, []);
+
   return (
-    <Sheet onOpenChange={aoMudar}>
-      <SheetTrigger asChild>
-        <Button
-          size="icon-lg"
-          aria-label="Abrir conversa com o professor"
-          className="group fixed right-5 bottom-[calc(4rem+1.25rem+env(safe-area-inset-bottom))] z-40 size-14 rounded-full shadow-lg md:bottom-6 md:right-6"
-        >
-          <OndaDeAudio />
-        </Button>
-      </SheetTrigger>
+    <Sheet open={aberto} onOpenChange={aoMudar}>
+      {mostrarBotao && (
+        <SheetTrigger asChild>
+          <Button
+            size="icon-lg"
+            aria-label="Abrir conversa com o professor"
+            className="group fixed right-5 bottom-[calc(4rem+1.25rem+env(safe-area-inset-bottom))] z-40 size-14 rounded-full shadow-lg md:bottom-6 md:right-6"
+          >
+            <OndaDeAudio />
+          </Button>
+        </SheetTrigger>
+      )}
 
       <SheetContent
         side="bottom"

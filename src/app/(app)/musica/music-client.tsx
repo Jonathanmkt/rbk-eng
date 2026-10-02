@@ -1,9 +1,23 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { ArrowLeft, BookmarkPlus, Check, Copy, Languages, Music, Sparkles, Square, Volume2, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  BookmarkPlus,
+  Check,
+  Copy,
+  Headphones,
+  Languages,
+  Loader2,
+  Music,
+  Sparkles,
+  Square,
+  Volume2,
+  X,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { paragraphOf } from '@/lib/leitor/words';
 import {
@@ -17,6 +31,9 @@ import { speak as speakTTS } from '@/lib/tts';
 import { salvarSelecaoMusica, type DeezerHit, type Song } from './actions';
 import { fetchLyrics } from './lyrics';
 import { SongSearch } from './song-search';
+import { abrirProfessor } from '../protected/abrir-professor';
+import { ConversaFab } from '../protected/conversa-fab';
+import { OndaDeAudio } from '../protected/onda-de-audio';
 
 type Sel = { text: string; paragraph: string; pos: { left: number; top: number } };
 type Panel = {
@@ -169,6 +186,30 @@ export function MusicClient() {
     });
   };
 
+  // ── Aula com o professor sobre esta música ──
+  const [abrindoAula, setAbrindoAula] = useState(false);
+  const [erroAula, setErroAula] = useState<string | null>(null);
+  const abrirAula = async () => {
+    if (!track) return;
+    window.speechSynthesis?.cancel();
+    setSpeakingAll(false);
+    setAbrindoAula(true);
+    setErroAula(null);
+    try {
+      const resp = await fetch('/api/professor/aula', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'musica', titulo: track.title, artista: track.artist, letra: track.lyrics }),
+      });
+      if (!resp.ok) throw new Error();
+      abrirProfessor({ voz: true });
+    } catch {
+      setErroAula('Não consegui abrir a aula. Tente de novo.');
+    } finally {
+      setAbrindoAula(false);
+    }
+  };
+
   const closeMenu = () => {
     window.getSelection()?.removeAllRanges();
     setSel(null);
@@ -177,43 +218,55 @@ export function MusicClient() {
   // ── Leitura da letra selecionada ──
   if (track) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3">
+        {/* Barra da música: voltar, título e as três ações. Presa no topo ao rolar a letra. */}
+        <div className="surface-glass sticky top-0 z-10 -mx-2 flex items-center gap-1 rounded-xl px-1 py-1">
           <Button
             variant="ghost"
-            size="sm"
+            size="icon-lg"
+            className="size-11 shrink-0 rounded-full"
+            aria-label="Voltar para a busca"
+            title="Voltar"
             onClick={() => {
               window.speechSynthesis?.cancel();
               setSpeakingAll(false);
               setTrack(null);
             }}
           >
-            <ArrowLeft /> Voltar
+            <ArrowLeft className="size-5" />
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{track.title}</p>
+            <p className="truncate font-semibold leading-tight">{track.title}</p>
             <p className="truncate text-xs text-muted-foreground">{track.artist}</p>
           </div>
-          <Button
-            variant={speakingAll ? 'brand' : 'outline'}
-            size="sm"
+          <AcaoDaMusica
+            rotulo={speakingAll ? 'Parar' : 'Ouvir'}
+            descricao={speakingAll ? 'Parar o áudio' : 'Ouvir a letra'}
+            ativo={speakingAll}
             onClick={toggleAllAudio}
-            aria-label={speakingAll ? 'Parar áudio' : 'Ouvir a letra'}
           >
-            {speakingAll ? <Square /> : <Volume2 />}
-            {speakingAll ? 'Parar' : 'Ouvir'}
-          </Button>
-          <Button
-            variant={lineTranslations ? 'brand' : 'outline'}
-            size="sm"
+            {speakingAll ? <Square className="size-5" /> : <Headphones className="size-5" />}
+          </AcaoDaMusica>
+          <AcaoDaMusica
+            rotulo={lineTranslations ? 'Original' : 'Traduzir'}
+            descricao={lineTranslations ? 'Mostrar só o original' : 'Traduzir a letra'}
+            ativo={!!lineTranslations}
+            ocupado={translatingAll}
             onClick={toggleTranslateAll}
-            disabled={translatingAll}
-            aria-label="Traduzir a música"
           >
-            <Languages />
-            {translatingAll ? 'Traduzindo…' : lineTranslations ? 'Original' : 'Traduzir'}
-          </Button>
+            {translatingAll ? <Loader2 className="size-5 animate-spin" /> : <Languages className="size-5" />}
+          </AcaoDaMusica>
+          <AcaoDaMusica
+            rotulo="Aula"
+            descricao="Aula com o professor sobre esta música"
+            ocupado={abrindoAula}
+            onClick={abrirAula}
+          >
+            {abrindoAula ? <Loader2 className="size-5 animate-spin" /> : <OndaDeAudio className="h-5" />}
+          </AcaoDaMusica>
         </div>
+        {erroAula && <p className="text-center text-xs text-destructive">{erroAula}</p>}
+        <ConversaFab mostrarBotao={false} />
 
         <Card>
           <CardContent className="relative">
@@ -335,7 +388,12 @@ export function MusicClient() {
   }
 
   // ── Busca no Deezer ──
-  return <SongSearch onSelect={pickSong} />;
+  return (
+    <div className="flex flex-col gap-4">
+      <h1 className="text-2xl font-bold tracking-tight">Música</h1>
+      <SongSearch onSelect={pickSong} />
+    </div>
+  );
 }
 
 const LOADING_LINES = [
@@ -378,4 +436,42 @@ function LyricsLoading({ title, artist }: { title: string; artist: string }) {
 
 function msg(e: unknown): string {
   return e instanceof Error ? e.message : 'Falhou.';
+}
+
+/**
+ * Ação da barra da música: ícone grande (alvo de toque de 44 px) com rótulo curto
+ * embaixo, no mesmo padrão da barra de navegação do app. Ativo = fundo de destaque.
+ */
+function AcaoDaMusica({
+  rotulo,
+  descricao,
+  ativo = false,
+  ocupado = false,
+  onClick,
+  children,
+}: {
+  rotulo: string;
+  descricao: string;
+  ativo?: boolean;
+  ocupado?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={ocupado}
+      aria-label={descricao}
+      aria-pressed={ativo}
+      title={descricao}
+      className={cn(
+        'flex w-14 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1 text-[11px] font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60',
+        ativo ? 'bg-primary text-primary-foreground' : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+      )}
+    >
+      <span className="flex size-7 items-center justify-center">{children}</span>
+      {rotulo}
+    </button>
+  );
 }

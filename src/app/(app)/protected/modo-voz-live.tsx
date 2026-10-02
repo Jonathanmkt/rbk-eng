@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Keyboard, Mic, MicOff, RotateCcw } from 'lucide-react';
+import { Check, Keyboard, Mic, MicOff, RotateCcw } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AltoFalante, Microfone, microfonePermitido } from '@/lib/professor/audio-live';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,8 @@ export function ModoVozLive({
   const [nivel, setNivel] = useState(0);
   const [mudo, setMudo] = useState(false);
   const [tentativa, setTentativa] = useState(0);
+  /** Expressões que o professor guardou no banco e na revisão nesta conversa. */
+  const [salvos, setSalvos] = useState<string[]>([]);
 
   const mudoRef = useRef(false);
   const acrescentarRef = useRef(conversa.acrescentarAoVivo);
@@ -75,7 +78,9 @@ export function ModoVozLive({
 
     const enviarPedaco = (pcm: ArrayBuffer, n: number) => {
       setNivel(n);
-      if (!canal || mudoRef.current || emVoo > 4) return; // rede lenta: descarta em vez de acumular atraso
+      if (!canal || emVoo > 4) return; // rede lenta: descarta em vez de acumular atraso
+      // Silenciado: manda silêncio em vez de nada, para o servidor saber que a aula segue aberta.
+      if (mudoRef.current) pcm = new ArrayBuffer(pcm.byteLength);
       emVoo++;
       void fetch(`/api/professor/live?canal=${canal}`, {
         method: 'POST',
@@ -113,6 +118,9 @@ export function ModoVozLive({
           break;
         case 'ele':
           if (e.texto) acrescentarRef.current('assistant', e.texto);
+          break;
+        case 'salvo':
+          if (e.texto) setSalvos((atuais) => (atuais.includes(e.texto!) ? atuais : [...atuais, e.texto!]));
           break;
         case 'expirando':
           setMensagem('A sessão de voz vai terminar em instantes.');
@@ -207,6 +215,18 @@ export function ModoVozLive({
       <p className="min-h-5 text-center text-sm text-muted-foreground" aria-live="polite">
         {mensagem ?? rotulo}
       </p>
+
+      {salvos.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-1.5" aria-live="polite">
+          <span className="text-xs text-muted-foreground">Guardado para revisar:</span>
+          {salvos.map((s) => (
+            <Badge key={s} variant="success">
+              <Check />
+              {s}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-center gap-2">
         {estado === 'encerrado' || estado === 'erro' ? (

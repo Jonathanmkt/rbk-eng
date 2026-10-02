@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 
+import { lerMaterialMusica, montarAulaDeMusica, type MaterialMusica } from '@/lib/professor/aula-musica';
 import { carregarFotoDoAluno } from '@/lib/professor/contexto';
+import { trechosMarcadosNaMusica } from '@/lib/professor/memorizar';
 import { montarFotoDoAluno, PROFESSOR_PROMPT_FIXO } from '@/lib/professor/prompt';
 import { createClient } from '@/lib/supabase/server';
 
@@ -98,6 +100,7 @@ export async function POST(request: Request) {
   // ── Sessão ────────────────────────────────────────────────────────────────
   let sessaoId: string;
   let usoAcumulado: Uso = { cache_hit: 0, cache_miss: 0, output: 0 };
+  let musica: MaterialMusica | null = null;
 
   if (nova) {
     if (sessaoPedida) {
@@ -123,7 +126,7 @@ export async function POST(request: Request) {
     const { data } = await supabase
       .schema('tutor')
       .from('sessions')
-      .select('id, usage, ended_at')
+      .select('id, usage, ended_at, kind, material')
       .eq('id', sessaoPedida)
       .maybeSingle();
     if (!data || data.ended_at) {
@@ -132,6 +135,7 @@ export async function POST(request: Request) {
     if (!mensagem) return NextResponse.json({ erro: 'Mensagem vazia.' }, { status: 400 });
     sessaoId = data.id;
     usoAcumulado = { ...usoAcumulado, ...(data.usage as Partial<Uso>) };
+    if (data.kind === 'musica') musica = lerMaterialMusica(data.material);
   }
 
   const turnos = nova ? [] : await carregarTurnos(supabase, sessaoId);
@@ -165,8 +169,26 @@ export async function POST(request: Request) {
       max_tokens: 600,
       user: userId,
       messages: [
-        { role: 'system', content: PROFESSOR_PROMPT_FIXO },
-        { role: 'system', content: montarFotoDoAluno(foto) },
+        // Aula de música por texto: o prompt próprio dela substitui as instruções gerais,
+        // sem a ferramenta (aqui a DeepSeek não salva sozinha).
+        ...(musica
+          ? [
+              {
+                role: 'system' as const,
+                content: montarAulaDeMusica(
+                  musica,
+                  {
+                    nome: foto.nome,
+                    palavrasMarcadas: await trechosMarcadosNaMusica(supabase, musica.letra),
+                  },
+                  'texto'
+                ),
+              },
+            ]
+          : [
+              { role: 'system' as const, content: PROFESSOR_PROMPT_FIXO },
+              { role: 'system' as const, content: montarFotoDoAluno(foto) },
+            ]),
         ...historico,
       ],
     }),

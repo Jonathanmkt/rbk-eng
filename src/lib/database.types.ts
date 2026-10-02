@@ -368,7 +368,7 @@ export type Database = {
     }
   }
   // ⚠️ Bloco escrito à mão (não gerado), como o `anki` e o `leitor` — o gerador só devolve o `public`.
-  // Espelha a migration `create_tutor_conversas` (30/09/2026).
+  // Espelha as migrations `create_tutor_conversas` (30/09/2026) e `tutor_sessions_tipo_e_material` (02/10/2026).
   tutor: {
     Tables: {
       sessions: {
@@ -381,6 +381,8 @@ export type Database = {
           model: string | null
           usage: Json
           summary: string | null
+          kind: 'livre' | 'musica'
+          material: Json | null
         }
         Insert: {
           id?: string
@@ -391,6 +393,8 @@ export type Database = {
           model?: string | null
           usage?: Json
           summary?: string | null
+          kind?: 'livre' | 'musica'
+          material?: Json | null
         }
         Update: {
           id?: string
@@ -401,6 +405,8 @@ export type Database = {
           model?: string | null
           usage?: Json
           summary?: string | null
+          kind?: 'livre' | 'musica'
+          material?: Json | null
         }
         Relationships: []
       }
